@@ -34,8 +34,7 @@
     (.generateSignature signer)))
 
 (defn new-verifier
-  "return new instance of `Ed25519Signer` initialized by a base64 encoded
-  private key String"
+  "return new instance of `Ed25519Signer` initialized by public key bytes"
   [public]
   (let [signer (Ed25519Signer.)
         params (Ed25519PublicKeyParameters. public 0)]
