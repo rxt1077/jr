@@ -1,6 +1,6 @@
 (ns jr.simulation
   (:require [jr.id :as id])
-  (:require [jr.state :as state])
+  (:require [jr.node :as node])
   (:require [clojure.set]))
 
 (defn create-nodes
@@ -13,8 +13,8 @@
 
 (defn public-key
   "Pulls the public key from a node"
-  [node]
-  (:public (:keyp node)))
+  [node1]
+  (:public (:keyp node1)))
 
 (defn public-keys
   "Gets a set of all public keys from a node list"
@@ -24,12 +24,12 @@
 (defn rand-follow
   "Picks n random nodes to follow and has node follow them. node can't follow
   itself"
-  [nodes node n]
-  (let [possible-keys (clojure.set/difference (public-keys nodes) #{(public-key node)})]
-    (state/follow (take n (shuffle possible-keys)) node)))
+  [nodes node1 n]
+  (let [possible-keys (clojure.set/difference (public-keys nodes) #{(public-key node1)})]
+    (node/follow node1 (take n (shuffle possible-keys)))))
 
 (defn net-bootstrap
   "Creates jr network with n nodes randomly following f nodes"
   [n f]
   (let [nodes (create-nodes n)]
-    (map #(rand-follow nodes % f) nodes))) 
+    (map #(rand-follow nodes % f) nodes)))

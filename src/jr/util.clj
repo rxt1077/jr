@@ -7,10 +7,12 @@
   (String. (b64/encode data)))
 
 (defn map->base64
-  [msg]
-  "converts byte arrays in a map to base64"
+  [curr-map]
+  "recursively converts all byte arrays in a map to base64"
   (reduce (fn [new-map [key val]]
-            (if (bytes? val)
-              (assoc new-map key (bytes->base64 val))
-              (assoc new-map key val)))
-          {} msg))
+            (if (map? val)
+              (assoc new-map key (map->base64 val))
+              (if (bytes? val)
+                (assoc new-map key (bytes->base64 val))
+                (assoc new-map key val))))
+    {} curr-map))
