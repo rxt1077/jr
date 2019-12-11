@@ -3,10 +3,8 @@
 
 (defn new-message
   "creates a new message"
-  [keyp msg]
+  [public private msg]
   (let [signed-map (assoc msg :timestamp (inst-ms (java.util.Date.)))
-        public (:public keyp)
-        private (:private keyp)
         signature (id/sign private signed-map)]
     (assoc signed-map :public public :signature signature)))
 

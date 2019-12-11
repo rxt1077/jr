@@ -14,8 +14,7 @@
         kpg      (Ed25519KeyPairGenerator.)
         _        (.init kpg (Ed25519KeyGenerationParameters. random))
         key-pair (.generateKeyPair kpg)]
-    {:public  (.getEncoded (.getPublic key-pair))
-     :private (.getEncoded (.getPrivate key-pair))}))
+    [(.getEncoded (.getPublic key-pair)) (.getEncoded (.getPrivate key-pair))]))
 
 (defn new-signer
   "return new instance of `Ed25519Signer` initialized by private key bytes"
