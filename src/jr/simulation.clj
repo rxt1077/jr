@@ -22,7 +22,7 @@
 (defn public-keys
   "Gets a set of all public keys from a node list"
   [nodes]
-  (set (map #(:public %) nodes)))
+  (map #(:public %) nodes))
 
 (defn rand-follow
   "Picks n random nodes to follow and has node follow them. node can't follow
@@ -43,9 +43,9 @@
   [node1 node2]
   (node/update-extended 
     (assoc node1 :messages (cljset/union (:messages node1)
-      (filter
+      (set (filter
         #(contains? (:extended node1) (:public %))
-        (:messages node2))))))
+        (:messages node2)))))))
 
 (defn rand-sync
   "Randomly picks 2 nodes and syncs them with each other. Returns an updated
@@ -58,7 +58,7 @@
         node2 (nth nodes n2)
         new-node1 (sync-obj node1 node2)
         new-node2 (sync-obj node2 node1)]
-    (printf "Syncing nodes %d->%d and %d->%d\n" n1 n2 n2 n1)
+    ; (printf "Syncing nodes %d->%d and %d->%d\n" n1 n2 n2 n1)
     ; nodes is a lazy-seq, this keeps it that way
     (map-indexed #(if (= %1 n1) new-node1 (if (= %1 n2) new-node2 %2)) nodes)))
 
@@ -77,9 +77,9 @@
   [nodes]
   (printf "=== %d nodes ===\n" (count nodes))
   (printf "Averages\n")
-  (printf "  :following %d\n" (avg-key nodes :following))
-  (printf "  :extended  %d\n" (avg-key nodes :extended))
-  (printf "  :messages  %d\n" (avg-key nodes :messages)))
+  (printf "  :following %.2f\n" (float (avg-key nodes :following)))
+  (printf "  :extended  %.2f\n" (float (avg-key nodes :extended)))
+  (printf "  :messages  %.2f\n" (float (avg-key nodes :messages))))
 
 (defn pprint
   "Pretty prints with aliases"
