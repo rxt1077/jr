@@ -1,42 +1,16 @@
-# jr
+---
+title: jr Network Simulations
+header-includes:
+- <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+- <script src="https://cdn.jsdelivr.net/npm/vega-lite@4"></script>
+- <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+...
 
-jr is a distributed, peer-to-peer social communication platform modeled after
-[Secure Scuttle Butt](https://github.com/ssbc).
+jr was primarily built as a simulation platform. `simulation.clj` has many
+interesting functions for building / analyzing jr networks and monitoring
+their growth.
 
-## Network
-
-### Identity
-
-All users on the jr network have an ed25519 keypair. They use their public key
-as their identity and their private key is used to sign their messages.
-
-### Following Network
-
-Users maintain a set of public keys that they would like to follow. When a user
-decides to follow a key they announce it publically by creating a `following` message.
-
-### Extended Network
-
-Users maintain a set of their `extended network`. These are the public keys they
-are following *as well as* the public keys of who their `following network` is
-following. 
-
-### Messages
-
-Each user maintains a list of messages that they have discovered or created.
-The process of syncing is simply exchanging messages sent by users in either
-parties `extended network`. Users may *carry* messages by people they aren't
-following, but the assumption is that people who follow those users may be
-interested in them.
-
-At a minimum, all messages have a public key, signature, and timestamp. The
-following message types are currently being used:
-
-#### Following
-
-#### Text
-
-## Simulations
+## Extended Network
 
 ### Testing the Extended Network Functionality
 
@@ -148,7 +122,7 @@ to update her `extended network` to include Carol.
 
 `sim/net-bootstrap n f` will create a network of n nodes each following f random
 nodes. Using this we can build a network of 100 nodes, each following 10 others
-and use `sim/print-stats` to see how it was set up.
+and use `sim/print-stats` to see how it was set up:
 
 ```clojure
 jr.core=> (def nodes (sim/net-boostrap 100 10))
@@ -162,14 +136,37 @@ Averages
 nil
 ```
 
-As expected, the extended network is limited to only nodes that a node is
-following. Nodes build their following network by finding out about followers
-in messages that they sync. `sim/rand-sync` will pick two nodes at random and
-have them sync with eachother. We can use it to watch how the average extended
-network grows as nodes randomly sync. `core/extended-propagation-test` does
-exactly that, outputing the average size of an extended network to
+As expected, the extended network of each node is limited to only nodes that a
+node is following. Nodes build their following network by finding out about
+followers in messages that they sync. `sim/rand-sync` will pick two nodes at
+random and have them sync with eachother. We can use it to watch how the average
+extended network grows as nodes randomly sync. `core/extended-propagation-test`
+does exactly that, outputing the average size of an extended network to
 "data/extended_network_setup.csv" for every iteration:
 
 Running it and graphing the output yields:
 
-
+<div id="vis" style="width: 75%; height: 500px;"></div>
+<script type="text/javascript">
+    var yourVlSpec = {
+        "data": {
+            "url": "https://raw.githubusercontent.com/rxt1077/jr/master/data/extended_setup.csv"
+        },
+        "width": "container",
+        "height": "container",
+        "mark": "line",
+        "encoding": {
+            "x": {
+                "field": "iterations",
+                "type": "quantitative",
+                "axis": {"title": "Number of Random Sync Events"}
+            },
+            "y": {
+                "field": "avg_extended_size",
+                "type": "quantitative",
+                "axis": {"title": "Average Size of Extended Network"}
+            }
+        }
+    };
+    vegaEmbed('#vis', yourVlSpec);
+</script>
