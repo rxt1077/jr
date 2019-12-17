@@ -7,11 +7,6 @@
   (:require [clojure.data.csv :as csv])
   (:require [clojure.java.io :as io]))
 
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (println "Hello, World!"))
-
 (defn extended-sync-test
   "Tests extended network syncing"
   []
@@ -34,14 +29,16 @@
           (nth nodes2 2)))
   (sim/pprint nodes3 aliases))
 
-(defn extended-propagation-test
+(defn extended-setup-test
   "Determines how many random iterations it takes to set up the extended
   network."
   []
   (def nodes (sim/net-bootstrap 100 10))
-  (with-open [writer (io/writer "output.csv")]
+  (with-open [writer (io/writer "data/extended_setup.csv")]
     (csv/write-csv writer
-      (map vector
-        (range 1000) 
-        (map #(float (sim/avg-key % :extended))
-             (take 1000 (iterate sim/rand-sync nodes)))))))
+     (cons
+       ["iterations" "avg_extended_size"]
+        (map vector
+          (range 1000) 
+          (map #(float (sim/avg-key % :extended))
+               (take 1000 (iterate sim/rand-sync nodes))))))))
