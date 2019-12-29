@@ -4,6 +4,7 @@
   (:require [jr.node :as node])
   (:require [jr.simulation :as sim])
   (:require [jr.alias])
+  (:require [jr.gradient :as gradient])
   (:require [clojure.data.csv :as csv])
   (:require [clojure.java.io :as io]))
 
@@ -42,3 +43,21 @@
           (range 1000) 
           (map #(float (sim/avg-key % :extended))
                (take 1000 (iterate sim/rand-sync nodes))))))))
+
+(defn gradient-test
+  [b m]
+  (with-open [reader (io/reader "data/extended_setup.csv")]
+    (let [data (map #(let [[t y] %] [(Integer/parseInt t) (Double/parseDouble y)])
+                    (drop 1 (doall (csv/read-csv reader))))]
+      (gradient/ssr 10 b m data))))
+;      (gradient/ssr f b m data) 
+
+(defn ranges
+  "Testing ranges"
+  []
+  (with-open [reader (io/reader "data/extended_setup.csv")]
+    (def data (map #(let [[t y] %] [(Integer/parseInt t) (Double/parseDouble y)])
+                    (drop 1 (doall (csv/read-csv reader))))))
+  (def b-range (range 0 0.105 0.01M))
+  (def m-range (range 0 1000.5 1))
+  (for [b b-range m m-range] (println b m (gradient/ssr 10 b m data))))

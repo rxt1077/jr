@@ -146,11 +146,10 @@ does exactly that, outputing the average size of an extended network to
 
 Running it and graphing the output yields:
 
-#### Extended Network Size vs. Sync Events
-
 <div id="vis1" style="width: 75%; height: 500px;"></div>
 <script type="text/javascript">
     var yourVlSpec = {
+    	"title": "Extended Network Growth",
         "data": {
             "url": "https://raw.githubusercontent.com/rxt1077/jr/master/data/extended_setup.csv"
         },
@@ -205,27 +204,68 @@ write.csv(output_data, "extended_setup_fit.csv", row.names=FALSE)
 
 The output from R shows that we are getting a relatively close fit:
 
+```R
+> source("extended_setup.R")
+Nonlinear regression model
+  model: y1 ~ A + (K - A)/(1 + exp(-B * (x - M)))
+   data: parent.frame()
+        A         K         B         M
+ 12.69036 102.77688   0.01057 542.87158
+ residual sum-of-squares: 2307
+
+Number of iterations to convergence: 7
+Achieved convergence tolerance: 1.43e-06
+```
+
 <div id="vis2" style="width: 75%; height: 500px;"></div>
 <script type="text/javascript">
     var yourVlSpec = {
+    	"title": "Extended Network Growth with Fitted Sigmoid",
         "data": {
             "url": "https://raw.githubusercontent.com/rxt1077/jr/master/data/extended_setup_fit.csv"
         },
         "width": "container",
         "height": "container",
-        "mark": "line",
-        "encoding": {
-            "x": {
-                "field": "iterations",
-                "type": "quantitative",
-                "axis": {"title": "Number of Random Sync Events"}
+        "layer": [
+            {
+                "mark": "line",
+                "encoding": {
+                    "x": {
+                        "field": "iterations",
+                        "type": "quantitative",
+                        "axis": {"title": "Number of Random Sync Events"}
+                    },
+                    "y": {
+                        "field": "fit",
+                        "type": "quantitative",
+                        "axis": {"title": "Average Size of Extended Network"}
+                    },
+		    "color": {"value": "red"}
+                }
             },
-            "y": {
-                "field": "fit",
-                "type": "quantitative",
-                "axis": {"title": "Average Size of Extended Network"}
+            {
+                "mark": "line",
+                "encoding": {
+                    "x": {
+                        "field": "iterations",
+                        "type": "quantitative",
+                    },
+                    "y": {
+                        "field": "avg_extended_size",
+                        "type": "quantitative",
+                    }
+                }
             }
-        }
+        ]
     };
     vegaEmbed('#vis2', yourVlSpec);
 </script>
+
+It appears the average number of nodes in an extended network as a function of
+random sync events can be expressed as:
+
+$$ f(x) = f + \frac{f(n-1)}{1+e^{-B*(x-M)}} $$
+
+Where n is the total number of nodes, f is the number of nodes we follow to
+start, B is the growth rate and M is the iteration at which we experience the
+the most growth.

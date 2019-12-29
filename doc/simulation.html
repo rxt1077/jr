@@ -180,11 +180,12 @@
 <span id="cb4-9"><a href="#cb4-9"></a><span class="va">nil</span></span></code></pre></div>
 <p>As expected, the extended network of each node is limited to only nodes that a node is following. Nodes build their following network by finding out about followers in messages that they sync. <code>sim/rand-sync</code> will pick two nodes at random and have them sync with eachother. We can use it to watch how the average extended network grows as nodes randomly sync. <code>core/extended-propagation-test</code> does exactly that, outputing the average size of an extended network to “data/extended_network_setup.csv” for every iteration:</p>
 <p>Running it and graphing the output yields:</p>
-<div id="vis" style="width: 75%; height: 500px;">
+<div id="vis1" style="width: 75%; height: 500px;">
 
 </div>
 <script type="text/javascript">
     var yourVlSpec = {
+        "title": "Extended Network Growth",
         "data": {
             "url": "https://raw.githubusercontent.com/rxt1077/jr/master/data/extended_setup.csv"
         },
@@ -204,7 +205,91 @@
             }
         }
     };
-    vegaEmbed('#vis', yourVlSpec);
+    vegaEmbed('#vis1', yourVlSpec);
 </script>
+<p>The way the extended network grows over time appears to be a sigmoid function. Using R we can fit a function to it:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a><span class="co"># Simple R script to fit a sigmoid and write a new column of fitted data to</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a><span class="co"># a CSV</span></span>
+<span id="cb5-3"><a href="#cb5-3"></a></span>
+<span id="cb5-4"><a href="#cb5-4"></a>sigmoid =<span class="st"> </span><span class="cf">function</span>(params, x) {</span>
+<span id="cb5-5"><a href="#cb5-5"></a>    A &lt;-<span class="st"> </span>params[<span class="dv">1</span>] <span class="co"># the lower asymptote</span></span>
+<span id="cb5-6"><a href="#cb5-6"></a>    K &lt;-<span class="st"> </span>params[<span class="dv">2</span>] <span class="co"># the upper asymptote</span></span>
+<span id="cb5-7"><a href="#cb5-7"></a>    B &lt;-<span class="st"> </span>params[<span class="dv">3</span>] <span class="co"># the growth rate</span></span>
+<span id="cb5-8"><a href="#cb5-8"></a>    M &lt;-<span class="st"> </span>params[<span class="dv">4</span>] <span class="co"># the time of maximum growth</span></span>
+<span id="cb5-9"><a href="#cb5-9"></a></span>
+<span id="cb5-10"><a href="#cb5-10"></a>    A <span class="op">+</span><span class="st"> </span>(K <span class="op">-</span><span class="st"> </span>A) <span class="op">/</span><span class="st"> </span>(<span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="kw">exp</span>(<span class="op">-</span>B<span class="op">*</span>(x<span class="op">-</span>M)))</span>
+<span id="cb5-11"><a href="#cb5-11"></a>}</span>
+<span id="cb5-12"><a href="#cb5-12"></a></span>
+<span id="cb5-13"><a href="#cb5-13"></a>data =<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;extended_setup.csv&quot;</span>)</span>
+<span id="cb5-14"><a href="#cb5-14"></a>x &lt;-<span class="st"> </span>data<span class="op">$</span>iterations</span>
+<span id="cb5-15"><a href="#cb5-15"></a>y1 &lt;-<span class="st"> </span>data<span class="op">$</span>avg_extended_size</span>
+<span id="cb5-16"><a href="#cb5-16"></a>fitmodel &lt;-<span class="st"> </span><span class="kw">nls</span>(y1 <span class="op">~</span><span class="st"> </span>A <span class="op">+</span><span class="st"> </span>(K <span class="op">-</span><span class="st"> </span>A) <span class="op">/</span><span class="st"> </span>(<span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="kw">exp</span>(<span class="op">-</span>B<span class="op">*</span>(x <span class="op">-</span><span class="st"> </span>M))),</span>
+<span id="cb5-17"><a href="#cb5-17"></a>        <span class="dt">start=</span><span class="kw">list</span>(<span class="dt">A=</span><span class="dv">10</span>,<span class="dt">K=</span><span class="dv">100</span>,<span class="dt">B=</span><span class="fl">0.01</span>,<span class="dt">M=</span><span class="dv">500</span>))</span>
+<span id="cb5-18"><a href="#cb5-18"></a><span class="kw">print</span>(fitmodel)</span>
+<span id="cb5-19"><a href="#cb5-19"></a>params =<span class="st"> </span><span class="kw">coef</span>(fitmodel)</span>
+<span id="cb5-20"><a href="#cb5-20"></a>y2 &lt;-<span class="st"> </span><span class="kw">sigmoid</span>(params, x)</span>
+<span id="cb5-21"><a href="#cb5-21"></a><span class="co">#plot(x, y1, col=&#39;blue&#39;)</span></span>
+<span id="cb5-22"><a href="#cb5-22"></a><span class="co">#points(x, y2, col=&#39;red&#39;)</span></span>
+<span id="cb5-23"><a href="#cb5-23"></a>output_data &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">iterations=</span>x, <span class="dt">avg_extended_size=</span>y1, <span class="dt">fit=</span>y2)</span>
+<span id="cb5-24"><a href="#cb5-24"></a><span class="kw">write.csv</span>(output_data, <span class="st">&quot;extended_setup_fit.csv&quot;</span>, <span class="dt">row.names=</span><span class="ot">FALSE</span>)</span></code></pre></div>
+<p>The output from R shows that we are getting a relatively close fit:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="op">&gt;</span><span class="st"> </span><span class="kw">source</span>(<span class="st">&quot;extended_setup.R&quot;</span>)</span>
+<span id="cb6-2"><a href="#cb6-2"></a>Nonlinear regression model</span>
+<span id="cb6-3"><a href="#cb6-3"></a>  model<span class="op">:</span><span class="st"> </span>y1 <span class="op">~</span><span class="st"> </span>A <span class="op">+</span><span class="st"> </span>(K <span class="op">-</span><span class="st"> </span>A)<span class="op">/</span>(<span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="kw">exp</span>(<span class="op">-</span>B <span class="op">*</span><span class="st"> </span>(x <span class="op">-</span><span class="st"> </span>M)))</span>
+<span id="cb6-4"><a href="#cb6-4"></a>   data<span class="op">:</span><span class="st"> </span><span class="kw">parent.frame</span>()</span>
+<span id="cb6-5"><a href="#cb6-5"></a>        A         K         B         M</span>
+<span id="cb6-6"><a href="#cb6-6"></a> <span class="fl">12.69036</span> <span class="fl">102.77688</span>   <span class="fl">0.01057</span> <span class="fl">542.87158</span></span>
+<span id="cb6-7"><a href="#cb6-7"></a> residual sum<span class="op">-</span>of<span class="op">-</span>squares<span class="op">:</span><span class="st"> </span><span class="dv">2307</span></span>
+<span id="cb6-8"><a href="#cb6-8"></a></span>
+<span id="cb6-9"><a href="#cb6-9"></a>Number of iterations to convergence<span class="op">:</span><span class="st"> </span><span class="dv">7</span></span>
+<span id="cb6-10"><a href="#cb6-10"></a>Achieved convergence tolerance<span class="op">:</span><span class="st"> </span><span class="fl">1.43e-06</span></span></code></pre></div>
+<div id="vis2" style="width: 75%; height: 500px;">
+
+</div>
+<script type="text/javascript">
+    var yourVlSpec = {
+        "title": "Extended Network Growth with Fitted Sigmoid",
+        "data": {
+            "url": "https://raw.githubusercontent.com/rxt1077/jr/master/data/extended_setup_fit.csv"
+        },
+        "width": "container",
+        "height": "container",
+        "layer": [
+            {
+                "mark": "line",
+                "encoding": {
+                    "x": {
+                        "field": "iterations",
+                        "type": "quantitative",
+                        "axis": {"title": "Number of Random Sync Events"}
+                    },
+                    "y": {
+                        "field": "fit",
+                        "type": "quantitative",
+                        "axis": {"title": "Average Size of Extended Network"}
+                    },
+            "color": {"value": "red"}
+                }
+            },
+            {
+                "mark": "line",
+                "encoding": {
+                    "x": {
+                        "field": "iterations",
+                        "type": "quantitative",
+                    },
+                    "y": {
+                        "field": "avg_extended_size",
+                        "type": "quantitative",
+                    }
+                }
+            }
+        ]
+    };
+    vegaEmbed('#vis2', yourVlSpec);
+</script>
+<p>It appears the average number of nodes in an extended network as a function of random sync events can be expressed as:</p>
+<p><br /><span class="math display">$$ f(x) = f + \frac{f(n-1)}{1+e^{-B*(x-M)}} $$</span><br /></p>
+<p>Where n is the total number of nodes, f is the number of nodes we follow to start, B is the growth rate and M is the iteration at which we experience the the most growth.</p>
 </body>
 </html>
