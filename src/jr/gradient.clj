@@ -61,7 +61,7 @@
 (defn pdm
   "Returns the partial derivative of the logistic function with respect to m"
   [t f b m]
-  (/ (* f (- f 1) b (exp t b m)) (Math/pow (denom t b m) 2)))
+  (/ (* -1 f (- f 1) b (exp t b m)) (Math/pow (denom t b m) 2)))
 
 (defn grad
   "Returns the gradient of the cost function as [grad-b grad-m]"
@@ -73,26 +73,56 @@
               partial-b (pdb t f b m)
               partial-m (pdm t f b m)
               [curr-b curr-m] %1]
+;         (printf "partial-b %f partial-m %f difference %f\n" partial-b partial-m difference)
          [(+ curr-b (* -2 partial-b difference))
           (+ curr-m (* -2 partial-m difference))])
       [0 0] data)))
 
 (defn step
-  "Performs a gradient descent iteration to determine the next b and m value
-  that best fits the logistic function to the data in data/extended_setup.csv"
-  [f b m eta-b eta-m]
-    (let [data (read-csv)
-          [grad-b grad-m] (grad f b m data)
+  "Performs a gradient descent step to determine the next b and m value that
+  best fits the logistic function."
+  [f b m eta-b eta-m data]
+    (let [[grad-b grad-m] (grad f b m data)
           new-b           (- b (* grad-b eta-b))
           new-m           (- m (* grad-m eta-m))]
-      (printf "Input B=%f M=%f eta-b=%f eta-m=%f ssr=%f\n" b m eta-b eta-m
-              (ssr f b m data))
-      (printf "Gradient: B=%f M=%f\n", grad-b, grad-m)
-      (printf "Output B=%f M=%f ssr=%f\n" new-b new-m (ssr f new-b new-m data))
+      ;(println "=== Gradient Descent Step ===")
+      ;(printf "Input B=%f M=%f eta-b=%f eta-m=%f ssr=%f\n" b m eta-b eta-m
+      ;        (ssr f b m data))
+      ;(printf "Gradient: B=%f M=%f\n", grad-b, grad-m)
+      ;(printf "Output B=%f M=%f ssr=%f\n" new-b new-m (ssr f new-b new-m data))
       [new-b new-m]))
 
+(defn best-step
+  "Performs a series of gradient descent steps at different learning rates to
+  determine what the best step would be"
+  [f b m data]
+  (let [data      (read-csv)
+        eta-range [1E0 1E-1 1E-2 1E-3 1E-4 1E-5 1E-6 1E-7 1E-8 1E-9]]
+    (apply min-key first
+           (for [eta-b eta-range eta-m eta-range]
+             (let [[new-b new-m] (step f b m eta-b eta-m data)
+                   new-ssr       (ssr f new-b new-m data)]
+               [new-ssr new-b new-m])))))
+
 (defn descent
-  [f start-b start-m]
-  (iterate #(let [[b m] %
-                  [new-b new-m] (step 10 b m 0.0000001 0.001)]
-              [new-b new-m]) [start-b start-m]))
+  "Returns an lazy infinite sequence of adaptive eta gradient descent steps"
+  [f start-b start-m data]
+  (iterate #(let [[prev-ssr b m] %] (best-step f b m data))
+           [(ssr f start-b start-m data) start-b start-m]))
+
+(defn descent-to
+  "Realizes results from the descent sequence until the ssr changes by less than
+  diff. Returns [ssr b m]"
+  [f start-b start-m data diff]
+  (loop [results (descent f start-b start-m data)]
+    (let [[ssr1 b1 m1] (first  results)
+          [ssr2 b2 m2] (second results)]
+;      (println ssr1)
+;      (println b1)
+;      (println m1)
+;      (println ssr2)
+;      (println b2)
+;      (println m2)
+      (if (< (- ssr1 ssr2) diff)
+        [ssr2 b2 m2]
+        (recur (rest results))))))

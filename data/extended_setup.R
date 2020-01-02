@@ -2,8 +2,8 @@
 # a CSV
 
 sigmoid = function(params, x) {
-	A <- params[1] # the lower asymptote
-	K <- params[2] # the upper asymptote
+	A <- 10 # params[1] the lower asymptote
+	K <- 100 # params[2] # the upper asymptote
 	B <- params[3] # the growth rate
 	M <- params[4] # the time of maximum growth
 
@@ -13,8 +13,9 @@ sigmoid = function(params, x) {
 data = read.csv("extended_setup.csv")
 x <- data$iterations
 y1 <- data$avg_extended_size
-fitmodel <- nls(y1 ~ A + (K - A) / (1 + exp(-B*(x - M))),
-		start=list(A=10,K=100,B=0.01,M=500))
+fitmodel <- nls(y1 ~ 10 + (100 - 10) / (1 + exp(-B*(x - M))),
+#		start=list(A=10,K=100,B=0.01,M=500))
+		start=list(B=0.01,M=500))
 print(fitmodel)
 params = coef(fitmodel)
 y2 <- sigmoid(params, x)
