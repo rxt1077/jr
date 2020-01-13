@@ -30,12 +30,18 @@
           (nth nodes2 2)))
   (sim/pprint nodes3 aliases))
 
-(defn extended-setup-test
-  "Determines how many random iterations it takes to set up the extended
-  network."
+(defn avg-key-growth
+  "Performs sim/rand-sync repeatedly to build a sequence showing how a
+  particular key grows over time"
+  [nodes searchkey iterations]
+  (map #(float (sim/avg-key % searchkey))
+       (take iterations (iterate sim/rand-sync nodes))))
+
+(defn extended-growth
+  "Determines how the exteneded network grows over random iterations."
   []
   (def nodes (sim/net-bootstrap 100 10))
-  (with-open [writer (io/writer "data/extended_setup.csv")]
+  (with-open [writer (io/writer "data/extended_growth.csv")]
     (csv/write-csv writer
      (cons
        ["iterations" "avg_extended_size"]
@@ -44,20 +50,29 @@
           (map #(float (sim/avg-key % :extended))
                (take 1000 (iterate sim/rand-sync nodes))))))))
 
-(defn gradient-test
-  [b m]
-  (with-open [reader (io/reader "data/extended_setup.csv")]
-    (let [data (map #(let [[t y] %] [(Integer/parseInt t) (Double/parseDouble y)])
-                    (drop 1 (doall (csv/read-csv reader))))]
-      (gradient/ssr 10 b m data))))
-;      (gradient/ssr f b m data) 
+(defn multi-extended-growth
+  "Measures extended network growth for varying f values. Outputs
+  data/multi_extended_growth.csv"
+  [f-values]
+  (with-open [writer (io/writer "data/multi_extended_growth.csv")]
+    (csv/write-csv writer
+      (let [labels (cons "iterations" (map #(format "f=%d" %) f-values))]
+        (cons
+          labels
+          (apply mapv vector
+                 (range 0 1000 1)
+                 (map #(let [f %
+                             nodes (sim/net-bootstrap 100 f)
+                             data (avg-key-growth nodes :extended 1000)]
+                         data)
+                      f-values)))))))
 
-(defn ranges
-  "Testing ranges"
-  []
-  (with-open [reader (io/reader "data/extended_setup.csv")]
-    (def data (map #(let [[t y] %] [(Integer/parseInt t) (Double/parseDouble y)])
-                    (drop 1 (doall (csv/read-csv reader))))))
-  (def b-range (range 0 0.105 0.01M))
-  (def m-range (range 0 1000.5 1))
-  (for [b b-range m m-range] (println b m (gradient/ssr 10 b m data))))
+(defn multi-descent
+  "Determines the b and m values that best fit the columns in
+  data/multi_extended_growth.csv."
+  [f-values]
+  (map-indexed #(let [[a k] (gradient/calc-ak 100 %2)
+                      data  (gradient/read-csv "data/multi_extended_growth.csv"
+                                               (+ %1 1))]
+                  (gradient/descent-to a k 0.01 250 data 0.001))
+               f-values))

@@ -1,7 +1,7 @@
 set datafile separator ','
 set key autotitle columnhead
 unset key
-set terminal png
+set terminal pngcairo
 set output "extended_setup.png"
 set dgrid3d splines
 set title "Extended Network Growth"
