@@ -6,7 +6,8 @@
   (:require [jr.alias])
   (:require [jr.gradient :as gradient])
   (:require [clojure.data.csv :as csv])
-  (:require [clojure.java.io :as io]))
+  (:require [clojure.java.io :as io])
+  (:require [jr.gauss-newton :as gn]))
 
 (defn extended-sync-test
   "Tests extended network syncing"
@@ -60,19 +61,29 @@
         (cons
           labels
           (apply mapv vector
-                 (range 0 1000 1)
+                 (range 0 10000 1)
                  (map #(let [f %
                              nodes (sim/net-bootstrap 100 f)
-                             data (avg-key-growth nodes :extended 1000)]
+                             data (avg-key-growth nodes :extended 10000)]
                          data)
                       f-values)))))))
 
 (defn multi-descent
   "Determines the b and m values that best fit the columns in
-  data/multi_extended_growth.csv."
+  data/multi_extended_growth.csv and writes output to
+  data/multi_descent.csv"
   [f-values]
-  (map-indexed #(let [[a k] (gradient/calc-ak 100 %2)
-                      data  (gradient/read-csv "data/multi_extended_growth.csv"
-                                               (+ %1 1))]
-                  (gradient/descent-to a k 0.01 250 data 0.001))
-               f-values))
+  (with-open [writer (io/writer "data/multi_descent.csv")]
+    (csv/write-csv
+      writer
+      (cons
+        ["f" "b" "m"]
+        (map-indexed #(let [f         %2
+                            [a k]     (gradient/calc-ak 100 f)
+                            data      (gradient/read-csv
+                                        "data/multi_extended_growth.csv"
+                                        (+ %1 1))
+                            [ssr b m] (gradient/descent-to
+                                        a k 0.01 250 data 0.001)]
+                        [f b m])
+                     f-values)))))
