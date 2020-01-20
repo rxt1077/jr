@@ -12,15 +12,22 @@
    [2.500 0.2665]
    [3.740 0.3317]])
 
-(defn logistic
-  "Five parameter logistic"
-  [x a b c d e]
-  (+ d (/ (- a d) (Math/pow (+ 1 (Math/pow (/ x c) b)) e))))
-
 (defn example-function
   "Example function from Wikipedia article"
   [s v k]
   (/ (* v s) (+ k s)))
+
+(defn l5p
+  "Five parameter logistic:
+  https://www.mathworks.com/matlabcentral/fileexchange/38043-five-parameters-logistic-regression-there-and-back-again"
+  [x a b c d e]
+  (+ d (/ (- a d) (Math/pow (+ 1 (Math/pow (/ x c) b)) e))))
+
+(defn generalized-logistic
+  "Generalized logistic:
+  https://en.wikipedia.org/wiki/Generalised_logistic_function"
+  [t a k b v c m] 
+  (+ a (/ (- k a) (Math/pow (+ c (Math/exp (* -1 b (- t m)))) (/ 1 v)))))
 
 (defn residuals
   "Calculates the residuals, y_i - f(x_i), given a function and data"
@@ -30,6 +37,11 @@
               fx (apply f params)]
           (- y fx))
        data))
+
+(defn ssr
+  "Calculates the SSR from a matrix of residuals"
+  [r]
+  (reduce #(+ %1 (* %2 %2)) 0 r))
 
 (defn partials
   "Calculates the partial differentials for each parameter in a function, f,
@@ -51,16 +63,31 @@
             (partials params f)))
         data))
 
+(defn scale-increment
+  "Scales an increment by a specified alpha (learning rate)"
+  [increment alpha]
+  (mapv #(* % alpha) increment))
+
+(defn possible-estimates
+  "Calculates [ssr estimates] for all possible scaled increments" 
+  [increment estimates f data]
+  (mapv #(let [new-estimates (mapv + estimates (scale-increment increment %))
+               ssr           (ssr (residuals new-estimates f data))]
+           [ssr new-estimates])
+        [1E2 1E1 1E0 1E-1 1E-2]))
+
 (defn step
   "Calculates the next Gauss-Newton estimates"
   [estimates f data]
-  (let [j              (jacobian  estimates f data)
-        jt             (matrix/transpose j)
-        r              (residuals estimates f data)
-;        ssr            (reduce #(+ %1 (* %2 %2)) 0 r)
-        increment      (matrix/mmul (matrix/inverse (matrix/mmul jt j))
-                                    (matrix/mmul jt r))
-        next-estimates (mapv + estimates increment)]
+  (let [j                    (jacobian  estimates f data)
+        jt                   (matrix/transpose j)
+        r                    (residuals estimates f data)
+        increment            (matrix/mmul (matrix/inverse (matrix/mmul jt j))
+                                          (matrix/mmul jt r))
+        possible             (possible-estimates increment estimates f data)
+        [ssr next-estimates] (apply min-key first possible)]
+    (printf "SSR: %f\nIncrement: %s\nNext Estimates: %s\n"
+            ssr increment (pr-str next-estimates))
     next-estimates))
 
 (defn gauss-newton

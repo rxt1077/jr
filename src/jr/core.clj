@@ -61,10 +61,10 @@
         (cons
           labels
           (apply mapv vector
-                 (range 0 10000 1)
+                 (range 0 3000 1)
                  (map #(let [f %
                              nodes (sim/net-bootstrap 100 f)
-                             data (avg-key-growth nodes :extended 10000)]
+                             data (avg-key-growth nodes :extended 3000)]
                          data)
                       f-values)))))))
 
